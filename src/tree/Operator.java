@@ -15,8 +15,11 @@ public enum Operator {
     LESS_OP("_<_"),
     LEQUALS_OP("_<=_"),
     GEQUALS_OP("_>=_"),
+    AND_OP("_&&_"),
+    OR_OP("_||_"),
     /* unary operators */
     NEG_OP("-_", 1),
+    NOT_OP("!_", 1),
     INVALID_OP("INVALID");
 
     /**

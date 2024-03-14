@@ -390,5 +390,37 @@ public abstract class StatementNode {
                     newLine(level + 1) + loopStmt.toString(level + 1);
         }
     }
+
+    public static class RepeatNode extends StatementNode {
+        private ExpNode condition;
+        private final StatementNode body;
+        public RepeatNode(Location loc, StatementNode body,
+                          ExpNode condition) {
+            super(loc);
+            this.body = body;
+            this.condition = condition;
+        }
+
+        @Override
+        public void accept(StatementVisitor visitor) {
+            visitor.visitRepeatNode(this);
+        }
+
+        public ExpNode getCondition() {
+            return condition;
+        }
+
+        public void setCondition(ExpNode cond) { this.condition = cond; }
+
+        public StatementNode getBody() {
+            return body;
+        }
+
+        @Override
+        public String toString(int level) {
+            return "REPEAT" + body.toString(level + 1) + "UNTIL" +
+                    newLine(level + 1) + condition.toString();
+        }
+    }
 }
 

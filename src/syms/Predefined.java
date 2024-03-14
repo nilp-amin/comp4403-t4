@@ -49,8 +49,11 @@ public class Predefined {
                 Type.FALSE_VALUE);
         predefined.addConstant("true", ErrorHandler.NO_LOCATION, BOOLEAN_TYPE,
                 Type.TRUE_VALUE);
+        predefined.addOperator(Operator.NOT_OP, ErrorHandler.NO_LOCATION, LOGICAL_UNARY);
         predefined.addOperator(Operator.EQUALS_OP, ErrorHandler.NO_LOCATION, LOGICAL_BINARY);
         predefined.addOperator(Operator.NEQUALS_OP, ErrorHandler.NO_LOCATION, LOGICAL_BINARY);
+        predefined.addOperator(Operator.AND_OP, ErrorHandler.NO_LOCATION, LOGICAL_BINARY);
+        predefined.addOperator(Operator.OR_OP, ErrorHandler.NO_LOCATION, LOGICAL_BINARY);
         predefined.addOperator(Operator.NEG_OP, ErrorHandler.NO_LOCATION, ARITHMETIC_UNARY);
         predefined.addOperator(Operator.ADD_OP, ErrorHandler.NO_LOCATION, ARITHMETIC_BINARY);
         predefined.addOperator(Operator.SUB_OP, ErrorHandler.NO_LOCATION, ARITHMETIC_BINARY);
@@ -67,6 +70,10 @@ public class Predefined {
         predefined.addOperator(Operator.GEQUALS_OP, ErrorHandler.NO_LOCATION,
                 INT_RELATIONAL_TYPE);
         predefined.addOperator(Operator.LEQUALS_OP, ErrorHandler.NO_LOCATION,
+                INT_RELATIONAL_TYPE);
+        predefined.addOperator(Operator.AND_OP, ErrorHandler.NO_LOCATION,
+                INT_RELATIONAL_TYPE);
+        predefined.addOperator(Operator.OR_OP, ErrorHandler.NO_LOCATION,
                 INT_RELATIONAL_TYPE);
     }
 }

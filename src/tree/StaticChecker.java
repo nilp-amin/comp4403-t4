@@ -231,6 +231,14 @@ public class StaticChecker implements DeclVisitor, StatementVisitor,
         endCheck("While");
     }
 
+    public void visitRepeatNode(StatementNode.RepeatNode node) {
+        beginCheck("Repeat");
+        // Check the condition and replace with (possibly) transformed node
+        node.setCondition(checkCondition(node.getCondition()));
+        node.getBody().accept(this); // check the body of the repeat
+        endCheck("Repeat");
+    }
+
     /*************************************************
      *  Expression node static checker visit methods.
      *  The static checking visitor methods for expressions

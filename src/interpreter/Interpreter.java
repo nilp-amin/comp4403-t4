@@ -211,6 +211,16 @@ public class Interpreter implements StatementVisitor, ExpTransform<Value> {
         endExec("While");
     }
 
+    public void visitRepeatNode(StatementNode.RepeatNode node) {
+        beginExec("Repeat");
+        /* Execute body statement while the condition is true */
+        ExpNode condition = node.getCondition();
+        while (condition.evaluate(this).getInteger() != Type.TRUE_VALUE) {
+            node.getBody().accept(this);
+        }
+        endExec("Repeat");
+    }
+
 
     /* Expression Evaluations */
 
@@ -262,9 +272,13 @@ public class Interpreter implements StatementVisitor, ExpTransform<Value> {
     public Value visitBinaryNode(ExpNode.BinaryNode node) {
         beginExec("Binary");
         int result = -1;
-        /* Evaluate the left and right sides of the operator expression */
         int left = node.getLeft().evaluate(this).getInteger();
-        int right = node.getRight().evaluate(this).getInteger();
+        int right = -1;
+        /* Evaluate the left and right sides of the operator expression
+        * only if not short-circuiting */
+        if (node.getOp() != Operator.OR_OP && node.getOp() == Operator.AND_OP) {
+            right = node.getRight().evaluate(this).getInteger();
+        }
         /* Perform the operation on the left and right side of the expression */
         switch (node.getOp()) {
             /* Mathematical operations */
@@ -303,6 +317,20 @@ public class Interpreter implements StatementVisitor, ExpTransform<Value> {
             case GEQUALS_OP -> {
                 result = (left >= right ? Type.TRUE_VALUE : Type.FALSE_VALUE);
             }
+            case OR_OP -> {
+                result = Type.FALSE_VALUE;
+                if (left != Type.TRUE_VALUE) {
+                    right = node.getRight().evaluate(this).getInteger();
+                    result = (right == Type.TRUE_VALUE ? Type.TRUE_VALUE : Type.FALSE_VALUE);
+                }
+            }
+            case AND_OP -> {
+                result = Type.FALSE_VALUE;
+                if (left == Type.TRUE_VALUE) {
+                    right = node.getRight().evaluate(this).getInteger();
+                    result = (right == Type.TRUE_VALUE ? Type.TRUE_VALUE : Type.FALSE_VALUE);
+                }
+            }
             case INVALID_OP -> {
                 errors.fatal("PL0 Internal error: INVALID_OP",
                         node.getLocation());
@@ -327,6 +355,9 @@ public class Interpreter implements StatementVisitor, ExpTransform<Value> {
         switch (node.getOp()) {
             case NEG_OP -> {
                 result = -result;
+            }
+            case NOT_OP -> {
+                result = (result == Type.TRUE_VALUE ? Type.FALSE_VALUE : Type.TRUE_VALUE);
             }
             default -> {
                 // Never reached

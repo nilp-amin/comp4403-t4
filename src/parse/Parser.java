@@ -17,6 +17,8 @@ import source.ErrorHandler;
 import source.Errors;
 import java_cup.runtime.ComplexSymbolFactory.Location;
 
+import javax.swing.plaf.nimbus.State;
+
 /**
  * class Parser - PL0 recursive descent parser. To understand how this parser
  * works read the notes on recursive descent parsing.
@@ -42,6 +44,7 @@ import java_cup.runtime.ComplexSymbolFactory.Location;
  * ProcedureHead -> KW_PROCEDURE IDENTIFIER LPAREN FormalParameters RPAREN
  * FormalParameters ->
  * CompoundStatement -> KW_BEGIN StatementList KW_END
+ * RepeatStatement -> KW_REPEAT StatementList KW_UNTIL Condition
  * StatementList -> Statement { SEMICOLON Statement }
  * Statement -> WhileStatement | IfStatement | CallStatement | Assignment |
  *          ReadStatement | WriteStatement | CompoundStatement
@@ -52,7 +55,8 @@ import java_cup.runtime.ComplexSymbolFactory.Location;
  * ActualParameters ->
  * ReadStatement -> KW_READ LValue
  * WriteStatement -> KW_WRITE Exp
- * Condition -> RelCondition
+ * Condition -> LogTerm { (LOG_AND | LOG_OR) LogTerm }
+ * LogTerm -> LOG_NOT LogTerm | RelCondition
  * RelCondition -> Exp [ RelOp Exp ]
  * RelOp   -> EQUALS | NEQUALS | LEQUALS | LESS | GREATER | GEQUALS
  * Exp     -> [ PLUS | MINUS ] Term   { ( PLUS | MINUS ) Term }
@@ -245,12 +249,13 @@ public class Parser {
      */
     private final static TokenSet REL_CONDITION_START_SET =
             EXP_START_SET;
+    private final static TokenSet LOG_TERM_START_SET =
+            REL_CONDITION_START_SET.union(Token.LOG_NOT);
     /**
      * Set of tokens that may start a Condition.
      */
     private final static TokenSet CONDITION_START_SET =
-            REL_CONDITION_START_SET;
-
+            LOG_TERM_START_SET;
     //************ Operation sets for expressions ***************************
     /**
      * Set of tokens representing relational operators.
@@ -268,13 +273,51 @@ public class Parser {
      */
     private final static TokenSet TERM_OPS_SET =
             new TokenSet(Token.TIMES, Token.DIVIDE);
+    private final static TokenSet CONDITION_OPS_SET =
+            new TokenSet(Token.LOG_AND, Token.LOG_OR);
 
     /**
      * Rule: Condition -> RelCondition
      */
     private ExpNode parseCondition(TokenSet recoverSet) {
-        /* Let parseRelCondition handle the syntax error recovery, for now */
-        return parseRelCondition(recoverSet);
+        return exp.parse("Condition", CONDITION_START_SET, recoverSet,
+                () -> {
+                    ExpNode cond = parseLogTerm(recoverSet.union(CONDITION_OPS_SET));
+                    while (tokens.isIn(CONDITION_OPS_SET)) {
+                        Operator binaryOp = Operator.INVALID_OP;
+                        Location opLocation = tokens.getLocation();
+                        if (tokens.isMatch(Token.LOG_OR)) {
+                            binaryOp = Operator.OR_OP;
+                            tokens.match(Token.LOG_OR);
+                        } else if (tokens.isMatch(Token.LOG_AND)) {
+                            binaryOp = Operator.AND_OP;
+                            tokens.match(Token.LOG_AND);
+                        } else {
+                            fatal("Unreachable branch in parseCondition");
+                        }
+
+                        ExpNode right = parseLogTerm(recoverSet.union(CONDITION_OPS_SET));
+                        cond = new ExpNode.BinaryNode(opLocation, binaryOp, cond, right);
+                    }
+                    return cond;
+                });
+    }
+    private ExpNode parseLogTerm(TokenSet recoverSet) {
+        return exp.parse("LogTerm", LOG_TERM_START_SET, recoverSet,
+                () -> {
+                    ExpNode result = null;
+                    if (tokens.isMatch(Token.LOG_NOT)) {
+                        Location opLocation = tokens.getLocation();
+                        tokens.match(Token.LOG_NOT);
+                        result = parseLogTerm(recoverSet);
+                        result = new ExpNode.UnaryNode(opLocation, Operator.NOT_OP, result);
+                    } else if (tokens.isIn(REL_CONDITION_START_SET)) {
+                        result = parseRelCondition(recoverSet);
+                    } else {
+                        fatal("Unreachable branch in parseLogTerm");
+                    }
+                    return result;
+                });
     }
     /**
      * Rule: RelCondition -> Exp [ RelOp Exp ]
@@ -464,7 +507,7 @@ public class Parser {
      * Set of tokens that may start a Statement.
      */
     private final static TokenSet STATEMENT_START_SET =
-            LVALUE_START_SET.union(Token.KW_WHILE, Token.KW_IF,
+            LVALUE_START_SET.union(Token.KW_REPEAT, Token.KW_WHILE, Token.KW_IF,
                     Token.KW_READ, Token.KW_WRITE,
                     Token.KW_CALL, Token.KW_BEGIN);
 
@@ -538,6 +581,9 @@ public class Parser {
                         }
                         case KW_BEGIN -> {
                             return parseCompoundStatement(recoverSet);
+                        }
+                        case KW_REPEAT -> {
+                            return parseRepeatStatement(recoverSet);
                         }
                         default -> {
                             fatal("parseStatement");
@@ -655,6 +701,18 @@ public class Parser {
                     tokens.match(Token.RPAREN, recoverSet);
                     return new StatementNode.CallNode(loc, procId
                     );
+                });
+    }
+
+    private StatementNode parseRepeatStatement(TokenSet recoverSet) {
+        return stmt.parse("Repeat Statement", Token.KW_REPEAT, recoverSet,
+                () -> {
+                    tokens.match(Token.KW_REPEAT);
+                    Location loc = tokens.getLocation();
+                    StatementNode body = parseStatementList(recoverSet.union(Token.KW_UNTIL));
+                    tokens.match(Token.KW_UNTIL, CONDITION_START_SET);
+                    ExpNode condition = parseCondition(recoverSet);
+                    return new StatementNode.RepeatNode(loc, body, condition);
                 });
     }
 
