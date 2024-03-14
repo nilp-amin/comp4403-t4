@@ -318,17 +318,19 @@ public class Interpreter implements StatementVisitor, ExpTransform<Value> {
                 result = (left >= right ? Type.TRUE_VALUE : Type.FALSE_VALUE);
             }
             case OR_OP -> {
-                result = Type.FALSE_VALUE;
                 if (left != Type.TRUE_VALUE) {
                     right = node.getRight().evaluate(this).getInteger();
                     result = (right == Type.TRUE_VALUE ? Type.TRUE_VALUE : Type.FALSE_VALUE);
+                } else {
+                    result = Type.TRUE_VALUE;
                 }
             }
             case AND_OP -> {
-                result = Type.FALSE_VALUE;
                 if (left == Type.TRUE_VALUE) {
                     right = node.getRight().evaluate(this).getInteger();
                     result = (right == Type.TRUE_VALUE ? Type.TRUE_VALUE : Type.FALSE_VALUE);
+                } else {
+                    result = Type.FALSE_VALUE;
                 }
             }
             case INVALID_OP -> {
